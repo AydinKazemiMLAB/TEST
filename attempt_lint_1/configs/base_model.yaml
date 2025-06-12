@@ -1,0 +1,107 @@
+# General Project Settings
+project:
+  name: "Transformer_NMT_Base"         # Descriptive name for the project/run
+  output_dir: "outputs"                # str: Base directory for all project outputs (logs, checkpoints, results)
+  device: "cuda"                       # str: Computation device ('cuda' for GPU, 'cpu' for CPU)
+  num_gpus: 8                          # int: Number of GPUs to utilize for training (as used in paper)
+  seed: 42                             # int: Random seed for reproducibility
+
+# Logging Settings
+logging:
+  level: "INFO"                        # str: Logging verbosity level (e.g., 'DEBUG', 'INFO', 'WARNING', 'ERROR')
+  log_dir: "logs/training_runs"        # str: Directory for training logs
+  log_file: "base_model_training.log"  # str: Main log file name for this run
+
+# Checkpointing Settings
+checkpointing:
+  checkpoint_dir: "models/checkpoints" # str: Directory to save model checkpoints
+  save_interval_steps: 10000           # int: Save a checkpoint every X training steps
+  keep_top_k_checkpoints: 5            # int: Keep only the top K best checkpoints (based on primary_metric)
+  load_latest_checkpoint: False        # bool: Whether to attempt loading the latest checkpoint on startup
+  load_checkpoint_path: null           # str | null: Specific checkpoint path to load (if not loading latest)
+
+# Data Settings
+data:
+  dataset_name: "wmt14_en_de"          # str: Name of the dataset being used (e.g., 'wmt14_en_de', 'wmt14_en_fr', 'wsj_parsing')
+  data_root_dir: "data"                # str: Root directory where raw and processed data are stored
+  train_src_file: "raw/wmt14/train.en" # str: Relative path to training source file
+  train_tgt_file: "raw/wmt14/train.de" # str: Relative path to training target file
+  val_src_file: "raw/wmt14/val.en"     # str: Relative path to validation source file
+  val_tgt_file: "raw/wmt14/val.de"     # str: Relative path to validation target file
+  test_src_file: "raw/wmt14/test.en"   # str: Relative path to test source file
+  test_tgt_file: "raw/wmt14/test.de"   # str: Relative path to test target file
+
+  tokenizer:
+    type: "BPE"                                   # str: Type of tokenizer ('BPE', 'WordPiece')
+    src_tokenizer_model_path: "processed/wmt14_en_de/bpe_en.model" # str: Path to source tokenizer model (e.g., SentencePiece)
+    tgt_tokenizer_model_path: "processed/wmt14_en_de/bpe_de.model" # str: Path to target tokenizer model
+    src_vocab_path: "processed/wmt14_en_de/vocab.json" # str: Path to source vocabulary file (token to ID mapping)
+    tgt_vocab_path: "processed/wmt14_en_de/vocab.json" # str: Path to target vocabulary file
+    shared_vocabulary: True                       # bool: Whether source and target vocabularies are shared (True for EN-DE)
+    num_merges: 32000                             # int: Number of BPE merges (relevant for BPE, yields ~37k vocab size for EN-DE)
+    special_tokens:                               # dict: Mapping for special tokens
+      pad_token: "<pad>"                          # str: Padding token
+      sos_token: "<sos>"                          # str: Start-of-sequence token
+      eos_token: "<eos>"                          # str: End-of-sequence token
+      unk_token: "<unk>"                          # str: Unknown token
+
+  # Dataset parameters
+  max_seq_len: 256                     # int: Maximum sequence length for truncation/padding (for positional encodings)
+  max_tokens_per_batch: 25000          # int: Approximate total tokens (src + tgt) per training batch (as in paper)
+  eval_batch_size: 64                  # int: Fixed batch size (number of sentences) for evaluation
+  shuffle_train_data: True             # bool: Whether to shuffle training data each epoch
+
+# Model Architecture Settings
+model:
+  type: "Transformer"                  # str: Model architecture type
+  d_model: 512                         # int: Dimension of embeddings and sub-layer outputs
+  num_encoder_layers: 6                # int: Number of identical layers in the encoder (N)
+  num_decoder_layers: 6                # int: Number of identical layers in the decoder (N)
+  d_ff: 2048                           # int: Inner-layer dimensionality of the Position-wise Feed-Forward Network
+  num_attention_heads: 8               # int: Number of attention heads (h)
+  dropout_rate: 0.1                    # float: Dropout rate applied to sub-layer outputs and embeddings sum
+
+# Optimization Settings
+optimizer:
+  type: "Adam"                         # str: Optimizer type
+  adam_beta1: 0.9                      # float: Adam optimizer beta1 parameter
+  adam_beta2: 0.98                     # float: Adam optimizer beta2 parameter
+  adam_epsilon: 1.0e-9                 # float: Adam optimizer epsilon parameter
+
+# Learning Rate Schedule Settings (Transformer's custom schedule)
+lr_scheduler:
+  type: "Noam"                         # str: Learning rate schedule type (e.g., 'Noam' from the paper)
+  warmup_steps: 4000                   # int: Number of warmup steps for the Noam schedule
+
+# Regularization Settings
+regularization:
+  label_smoothing_epsilon: 0.1         # float: Label smoothing regularization parameter
+
+# Training Settings
+training:
+  max_steps: 100000                    # int: Total number of training steps (100k for base model)
+  log_interval_steps: 100              # int: Log training progress to console/file every X steps
+  validate_interval_steps: 1000        # int: Run validation on development set every X steps
+  gradient_clip_norm: 1.0              # float: Global gradient norm clipping value (common practice, not specified in paper)
+  save_best_model: True                # bool: Save model only if it improves the validation metric
+
+# Evaluation and Inference Settings
+evaluation:
+  metrics: ["BLEU", "Perplexity"]      # list[str]: List of metrics to report during evaluation
+  primary_metric: "BLEU"               # str: The primary metric for tracking best model and early stopping
+
+  # Inference parameters for machine translation
+  beam_search:
+    beam_size: 4                       # int: Beam size for greedy decoding during inference
+    length_penalty_alpha: 0.6          # float: Length penalty alpha for beam search
+    max_output_length_offset: 50       # int: Maximum output length = input_length + offset
+
+  model_averaging:
+    enabled: True                      # bool: Whether to use model averaging for final inference
+    num_checkpoints: 5                 # int: Number of last checkpoints to average
+
+  # Specific parameters for English Constituency Parsing task (not used by default base model)
+  parsing_task:
+    beam_size: 21
+    length_penalty_alpha: 0.3
+    max_output_length_offset: 300

@@ -1,0 +1,102 @@
+# configs/parsing_model.yaml (Specific configuration for English Constituency Parsing task)
+
+# General Project Settings
+project:
+  name: "Transformer_Parsing_WSJ"     # Descriptive name for the project/run
+  output_dir: "outputs"                # Base directory for all project outputs
+  device: "cuda"                       # Computation device ('cuda' for GPU, 'cpu' for CPU)
+  num_gpus: 1                          # Typically fewer GPUs for parsing task
+  seed: 42                             # Random seed for reproducibility
+
+# Logging Settings
+logging:
+  level: "INFO"
+  log_dir: "logs/training_runs"
+  log_file: "parsing_model_training.log" # Log file name for this run
+
+# Checkpointing Settings
+checkpointing:
+  checkpoint_dir: "models/checkpoints_parsing" # Separate checkpoint directory for parsing
+  save_interval_steps: 5000
+  keep_top_k_checkpoints: 5
+  load_latest_checkpoint: False
+  load_checkpoint_path: null
+
+# Data Settings
+data:
+  dataset_name: "wsj_parsing"          # Name of the dataset
+  data_root_dir: "data"
+  # Paths for WSJ dataset (assuming preprocessed files)
+  train_src_file: "raw/wsj/train.txt"  # Source (input sentence)
+  train_tgt_file: "raw/wsj/train.parse" # Target (parse tree as sequence)
+  val_src_file: "raw/wsj/val.txt"
+  val_tgt_file: "raw/wsj/val.parse"
+  test_src_file: "raw/wsj/test.txt"
+  test_tgt_file: "raw/wsj/test.parse"
+
+  tokenizer:
+    type: "WordPiece" # Or BPE, depending on preprocessing for parsing
+    src_tokenizer_model_path: "processed/wsj_parsing/wordpiece_wsj.model"
+    tgt_tokenizer_model_path: "processed/wsj_parsing/wordpiece_wsj.model"
+    src_vocab_path: "processed/wsj_parsing/vocab.json"
+    tgt_vocab_path: "processed/wsj_parsing/vocab.json"
+    shared_vocabulary: True           # Typically shared for parsing tasks
+    wordpiece_vocab_size: 16000       # 16K tokens for WSJ only setting
+    special_tokens:
+      pad_token: "<pad>"
+      sos_token: "<sos>"
+      eos_token: "<eos>"
+      unk_token: "<unk>"
+
+  max_seq_len: 512                     # Parsing outputs can be longer than NMT
+  max_tokens_per_batch: 10000          # Adjust batch size for parsing task
+  eval_batch_size: 32
+  shuffle_train_data: True
+
+# Model Architecture Settings
+model:
+  type: "Transformer"
+  d_model: 1024                        # As specified in paper for parsing
+  num_encoder_layers: 4                # As specified in paper for parsing
+  num_decoder_layers: 4                # As specified in paper for parsing
+  d_ff: 2048                           # Unchanged from base model (d_model/2 * 4)
+  num_attention_heads: 8               # Unchanged from base model (d_model/64)
+  dropout_rate: 0.1                    # Unchanged from base model
+
+# Optimization Settings
+optimizer:
+  type: "Adam"
+  adam_beta1: 0.9
+  adam_beta2: 0.98
+  adam_epsilon: 1.0e-9
+
+# Learning Rate Schedule Settings
+lr_scheduler:
+  type: "Noam"
+  warmup_steps: 4000
+
+# Regularization Settings
+regularization:
+  label_smoothing_epsilon: 0.1
+
+# Training Settings
+training:
+  max_steps: 100000                    # Adjust training steps for parsing task
+  log_interval_steps: 50
+  validate_interval_steps: 500
+  gradient_clip_norm: 1.0
+  save_best_model: True
+
+# Evaluation and Inference Settings
+evaluation:
+  metrics: ["F1"]                      # Primary metric for parsing is F1
+  primary_metric: "F1"
+
+  beam_search:
+    beam_size: 21                      # Specific beam size for parsing
+    length_penalty_alpha: 0.3          # Specific length penalty for parsing
+    max_output_length_offset: 300      # Specific max output length for parsing
+
+  model_averaging:
+    enabled: True
+    num_checkpoints: 5                 # Adjust for parsing task

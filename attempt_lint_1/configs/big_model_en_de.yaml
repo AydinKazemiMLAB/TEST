@@ -1,0 +1,102 @@
+# configs/big_model_en_de.yaml (Differences from base_model.yaml)
+
+# General Project Settings
+project:
+  name: "Transformer_NMT_Big_EN_DE" # Updated project name
+  output_dir: "outputs"
+  device: "cuda"
+  num_gpus: 8
+  seed: 42
+
+# Logging Settings
+logging:
+  level: "INFO"
+  log_dir: "logs/training_runs"
+  log_file: "big_model_en_de_training.log" # Updated log file name
+
+# Checkpointing Settings
+checkpointing:
+  checkpoint_dir: "models/checkpoints"
+  save_interval_steps: 10000
+  keep_top_k_checkpoints: 20 # Changed from 5
+  load_latest_checkpoint: False
+  load_checkpoint_path: null
+
+# Data Settings
+data:
+  dataset_name: "wmt14_en_de"
+  data_root_dir: "data"
+  train_src_file: "raw/wmt14/train.en"
+  train_tgt_file: "raw/wmt14/train.de"
+  val_src_file: "raw/wmt14/val.en"
+  val_tgt_file: "raw/wmt14/val.de"
+  test_src_file: "raw/wmt14/test.en"
+  test_tgt_file: "raw/wmt14/test.de"
+
+  tokenizer:
+    type: "BPE"
+    # Assuming separate tokenizer models/vocabs might be trained for big models
+    src_tokenizer_model_path: "processed/wmt14_en_de_big/bpe_en.model"
+    tgt_tokenizer_model_path: "processed/wmt14_en_de_big/bpe_de.model"
+    src_vocab_path: "processed/wmt14_en_de_big/vocab.json"
+    tgt_vocab_path: "processed/wmt14_en_de_big/vocab.json"
+    shared_vocabulary: True
+    num_merges: 32000 # Same number of merges for BPE
+
+  max_seq_len: 256
+  max_tokens_per_batch: 25000
+  eval_batch_size: 64
+  shuffle_train_data: True
+
+# Model Architecture Settings
+model:
+  type: "Transformer"
+  d_model: 1024                   # Changed from 512
+  num_encoder_layers: 6
+  num_decoder_layers: 6
+  d_ff: 4096                      # Changed from 2048
+  num_attention_heads: 16         # Changed from 8
+  dropout_rate: 0.3               # Changed from 0.1 (specific for EN-DE big model)
+
+# Optimization Settings
+optimizer:
+  type: "Adam"
+  adam_beta1: 0.9
+  adam_beta2: 0.98
+  adam_epsilon: 1.0e-9
+
+# Learning Rate Schedule Settings (Transformer's custom schedule)
+lr_scheduler:
+  type: "Noam"
+  warmup_steps: 4000
+
+# Regularization Settings
+regularization:
+  label_smoothing_epsilon: 0.1
+
+# Training Settings
+training:
+  max_steps: 300000               # Changed from 100000
+  log_interval_steps: 100
+  validate_interval_steps: 1000
+  gradient_clip_norm: 1.0
+  save_best_model: True
+
+# Evaluation and Inference Settings
+evaluation:
+  metrics: ["BLEU", "Perplexity"]
+  primary_metric: "BLEU"
+
+  beam_search:
+    beam_size: 4
+    length_penalty_alpha: 0.6
+    max_output_length_offset: 50
+
+  model_averaging:
+    enabled: True
+    num_checkpoints: 20           # Changed from 5
+
+  parsing_task:
+    beam_size: 21
+    length_penalty_alpha: 0.3
+    max_output_length_offset: 300
